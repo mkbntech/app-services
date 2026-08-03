@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrailHead Supply Co. — Gear for the way up</title>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fjalla+One&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main>
+    <section class="hero-wrap">
+      <img src="/img/hero_banner.jpg" class="hero-bg" alt="Majestic mountains banner">
+      <div class="hero-overlay"></div>
+      <div class="container hero-content">
+        <span class="hero-eyebrow">Trailhead-1 &middot; Elev. 8,848.86m</span>
+        <h1 class="hero-title">Gear that's earned its dirt.</h1>
+        <p class="hero-subtitle">Everything here has been carried up something steep. Browse by category or scroll the full manifest below.</p>
+        <a href="#gear" class="btn btn-hero">Explore Manifest</a>
+      </div>
+    </section>
+
+    <div class="container" id="gear">
+      <% if (pageError) { %>
+        <div class="banner-error"><%= pageError %></div>
+      <% } %>
+
+      <nav class="junction-nav">
+        <a href="/" class="<%= activeCategory === '' ? 'active' : '' %>">All gear</a>
+        <% categories.forEach(function(cat) { %>
+          <a href="/?category=<%= encodeURIComponent(cat) %>" class="<%= activeCategory === cat ? 'active' : '' %>"><%= cat %></a>
+        <% }) %>
+      </nav>
+
+      <% if (products.length === 0 && !pageError) { %>
+        <div class="empty-state">
+          <h2>No gear on this trail.</h2>
+          <p>Try a different category marker above.</p>
+        </div>
+      <% } else { %>
+        <div class="grid">
+          <% products.forEach(function(p) { %>
+            <a class="card" href="/products/<%= p.id %>">
+              <div class="card-media"><img src="<%= p.image %>" alt="<%= p.name %>" width="90" height="90"></div>
+              <div class="card-body">
+                <span class="card-category"><%= p.category %></span>
+                <h3 class="card-title"><%= p.name %></h3>
+                <p class="card-desc"><%= p.description %></p>
+                <div class="card-footer">
+                  <span class="price">$<%= p.price.toFixed(2) %></span>
+                </div>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

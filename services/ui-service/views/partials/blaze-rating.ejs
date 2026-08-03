@@ -1,0 +1,12 @@
+<%
+  // locals expected: rating (number, 0-5), count (optional)
+  const filled = Math.round(rating || 0);
+%>
+<span class="blaze-rating">
+  <% for (let i = 1; i <= 5; i++) { %>
+    <span class="blaze<%= i <= filled ? ' filled' : '' %>"></span>
+  <% } %>
+  <% if (typeof count !== 'undefined') { %>
+    <span class="blaze-rating-label"><%= rating ? rating.toFixed(1) : '—' %> · <%= count %> blazed</span>
+  <% } %>
+</span>

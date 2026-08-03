@@ -1,0 +1,125 @@
+version: "3.9"
+
+# TrailHead Supply Co. — local dev composition.
+# Mirrors the shape of the eventual AKS deployment: one BFF + three
+# independently-versioned backend services, each on its own stack.
+
+services:
+  catalogue-service:
+    build: ./services/catalogue-service
+    ports: ["8001:8001"]
+    environment:
+      - SERVICE_VERSION=1.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  recommendation-service:
+    build: ./services/recommendation-service
+    ports: ["8002:8002"]
+    environment:
+      - CATALOGUE_SERVICE_URL=http://catalogue-service:8001
+      - SERVICE_VERSION=1.0.0
+    depends_on:
+      catalogue-service:
+        condition: service_healthy
+
+  reviews-db:
+    image: postgres:16-alpine
+    container_name: reviews-db
+    ports: ["5432:5432"]
+    environment:
+      - POSTGRES_USER=trailhead
+      - POSTGRES_PASSWORD=trailhead_pwd
+      - POSTGRES_DB=reviews_db
+    volumes:
+      - reviews-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trailhead -d reviews_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  review-service:
+    build: ./services/review-service
+    ports: ["8003:8003"]
+    environment:
+      - PORT=8003
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://reviews-db:5432/reviews_db
+      - SPRING_DATASOURCE_USERNAME=trailhead
+      - SPRING_DATASOURCE_PASSWORD=trailhead_pwd
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+    depends_on:
+      reviews-db:
+        condition: service_healthy
+
+  ui-service:
+    build: ./services/ui-service
+    ports: ["3000:3000"]
+    environment:
+      - CATALOGUE_SERVICE_URL=http://catalogue-service:8001
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8002
+      - REVIEW_SERVICE_URL=http://review-service:8003
+      - SERVICE_VERSION=1.0.0
+    depends_on:
+      catalogue-service:
+        condition: service_healthy
+      recommendation-service:
+        condition: service_started
+      review-service:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - ui-service
+      - catalogue-service
+      - recommendation-service
+      - review-service
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    ports: ["3100:3100"]
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    user: "0:0"
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana
+    ports: ["3001:3000"]
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_BASIC_ENABLED=false
+    volumes:
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  reviews-db-data:

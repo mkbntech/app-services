@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'catalogue-service'
+    static_configs:
+      - targets: ['catalogue-service:8001']
+
+  - job_name: 'recommendation-service'
+    static_configs:
+      - targets: ['recommendation-service:8002']
+
+  - job_name: 'review-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['review-service:8003']
+
+  - job_name: 'ui-service'
+    static_configs:
+      - targets: ['ui-service:3000']

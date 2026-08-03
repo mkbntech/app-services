@@ -1,0 +1,17 @@
+{
+  "name": "trailhead-ui-service",
+  "version": "1.0.0",
+  "description": "TrailHead Supply Co. storefront - Node.js/Express BFF that composes the catalogue, recommendation, and review services into server-rendered pages.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "express": "^4.21.0",
+    "ejs": "^3.1.10",
+    "prom-client": "^15.1.3"
+  }
+}
