@@ -15,9 +15,8 @@ This repository manages **build and test automation** for four microservices: it
 ## Owner & Maintainer Information
 
 * **Owner**: Trailhead Supply Co. Microservices & Engineering Team
-* **Maintainers**: Application Engineering ([@mkbntech](https://gitlab.com/mkbntech))
-* **Contact & Support**: `dev-team@trailheadsupply.co`
-* **Repository**: [`trailhead-supply-co/app-services`](https://gitlab.com/trailhead-supply-co/app-services)
+* **Maintainers**: Application Engineering ([@mkbntech](https://github.com/mkbntech))
+* **Repository**: [`trailhead-supply-co/app-services`](https://github.com/mkbntech/app-services.git)
 
 ---
 
