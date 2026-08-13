@@ -59,13 +59,17 @@ spec:
         bases:
           - ../../base
         images:
-          - name: quay.io/mkbn02/ui-service
+          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/ui-service
+            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/ui-service
             newTag: "${REV}"
-          - name: quay.io/mkbn02/catalogue-service
+          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/catalogue-service
+            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/catalogue-service
             newTag: "${REV}"
-          - name: quay.io/mkbn02/recommendation-service
+          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/recommendation-service
+            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/recommendation-service
             newTag: "${REV}"
-          - name: quay.io/mkbn02/review-service
+          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/review-service
+            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/review-service
             newTag: "${REV}"
         patches:
           - target:
@@ -101,7 +105,7 @@ spec:
     - name: git-revision
       default: "main"
     - name: registry-host
-      default: "quay.io/mkbn02"
+      default: "image-registry.openshift-image-registry.svc:5000/trailhead-staging"
     - name: gitops-repo-url
       default: "https://github.com/mkbntech/app-services-gitops.git"
   workspaces:
@@ -156,11 +160,11 @@ spec:
         - name: IMAGE
           value: "$(params.registry-host)/catalogue-service:$(params.git-revision)"
         - name: TLS_VERIFY
-          value: "true"
+          value: "false"
 
     # Task 2b: Build Recommendation Service (Go)
     - name: build-recommendation
-      runAfter: ["fetch-source"]
+      runAfter: ["build-catalogue"]
       taskRef:
         resolver: cluster
         params:
@@ -183,11 +187,11 @@ spec:
         - name: IMAGE
           value: "$(params.registry-host)/recommendation-service:$(params.git-revision)"
         - name: TLS_VERIFY
-          value: "true"
+          value: "false"
 
     # Task 2c: Build Review Service (Java Spring Boot)
     - name: build-review
-      runAfter: ["fetch-source"]
+      runAfter: ["build-recommendation"]
       taskRef:
         resolver: cluster
         params:
@@ -210,11 +214,11 @@ spec:
         - name: IMAGE
           value: "$(params.registry-host)/review-service:$(params.git-revision)"
         - name: TLS_VERIFY
-          value: "true"
+          value: "false"
 
     # Task 2d: Build Storefront UI Service (Node.js)
     - name: build-ui
-      runAfter: ["fetch-source"]
+      runAfter: ["build-review"]
       taskRef:
         resolver: cluster
         params:
@@ -237,11 +241,11 @@ spec:
         - name: IMAGE
           value: "$(params.registry-host)/ui-service:$(params.git-revision)"
         - name: TLS_VERIFY
-          value: "true"
+          value: "false"
 
     # Task 3: Update GitOps Repository (app-services-gitops)
     - name: update-gitops
-      runAfter: ["build-catalogue", "build-recommendation", "build-review", "build-ui"]
+      runAfter: ["build-ui"]
       taskRef:
         name: update-gitops-repository
         kind: Task
