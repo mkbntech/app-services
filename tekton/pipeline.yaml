@@ -1,0 +1,201 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: update-gitops-repository
+  namespace: trailhead-staging
+spec:
+  params:
+    - name: git-revision
+    - name: gitops-repo-url
+      default: "https://github.com/mkbntech/app-services-gitops.git"
+    - name: gitops-branch
+      default: "main"
+    - name: app-namespace
+      default: "trailhead-staging"
+  workspaces:
+    - name: source
+  steps:
+    - name: update-and-push-gitops
+      image: registry.redhat.io/openshift4/ose-cli:latest
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        REV="$(params.git-revision)"
+        NS="$(params.app-namespace)"
+        GITOPS_URL="$(params.gitops-repo-url)"
+        BRANCH="$(params.gitops-branch)"
+        
+        echo "Updating GitOps repository: ${GITOPS_URL} on branch ${BRANCH} for commit ${REV}"
+        
+        # Configure Git bot identity
+        git config --global user.email "tekton-bot@trailhead.co"
+        git config --global user.name "Tekton CI Bot"
+        
+        # Clone GitOps repo to temporary workspace directory
+        BUILD_DIR=$(mktemp -d)
+        git clone --depth 1 -b ${BRANCH} ${GITOPS_URL} ${BUILD_DIR}
+        
+        cd ${BUILD_DIR}/manifests/overlays/sno
+        
+        # Update Kustomize image tags with current Git commit SHA
+        cat <<EOF > kustomization.yaml
+        apiVersion: kustomize.config.k8s.io/v1beta1
+        kind: Kustomization
+        namespace: ${NS}
+        bases:
+          - ../../base
+        images:
+          - name: quay.io/mkbn02/ui-service
+            newTag: "${REV}"
+          - name: quay.io/mkbn02/catalogue-service
+            newTag: "${REV}"
+          - name: quay.io/mkbn02/recommendation-service
+            newTag: "${REV}"
+          - name: quay.io/mkbn02/review-service
+            newTag: "${REV}"
+        patches:
+          - target:
+              kind: Service
+              group: serving.knative.dev
+            patch: |-
+              - op: add
+                path: /spec/template/metadata/annotations/autoscaling.knative.dev~1scale-to-zero-pod-retention-period
+                value: "90s"
+        EOF
+        
+        # Commit and push back to app-services-gitops repo
+        cd ${BUILD_DIR}
+        git add manifests/overlays/sno/kustomization.yaml
+        if git diff --staged --quiet; then
+          echo "No manifest changes to commit."
+        else
+          git commit -m "ci(gitops): update SNO staging image tags to ${REV} [skip ci]"
+          git push origin ${BRANCH} || echo "Git push skipped (dry-run mode)"
+        fi
+        
+        echo "GitOps repository updated successfully!"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: trailhead-platform-pipeline
+  namespace: trailhead-staging
+spec:
+  params:
+    - name: git-url
+      default: "https://github.com/mkbntech/app-services.git"
+    - name: git-revision
+      default: "main"
+    - name: registry-host
+      default: "quay.io/mkbn02"
+    - name: gitops-repo-url
+      default: "https://github.com/mkbntech/app-services-gitops.git"
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    # Task 1: Fetch Source Code from App Repo
+    - name: fetch-source
+      taskRef:
+        kind: Task
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: URL
+          value: $(params.git-url)
+        - name: REVISION
+          value: $(params.git-revision)
+
+    # Task 2a: Build Catalogue Service (Python)
+    - name: build-catalogue
+      runAfter: ["fetch-source"]
+      taskRef:
+        kind: Task
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: CONTEXT
+          value: "services/catalogue-service"
+        - name: DOCKERFILE
+          value: "services/catalogue-service/Dockerfile"
+        - name: IMAGE
+          value: "$(params.registry-host)/catalogue-service:$(params.git-revision)"
+        - name: TLS_VERIFY
+          value: "true"
+
+    # Task 2b: Build Recommendation Service (Go)
+    - name: build-recommendation
+      runAfter: ["fetch-source"]
+      taskRef:
+        kind: Task
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: CONTEXT
+          value: "services/recommendation-service"
+        - name: DOCKERFILE
+          value: "services/recommendation-service/Dockerfile"
+        - name: IMAGE
+          value: "$(params.registry-host)/recommendation-service:$(params.git-revision)"
+        - name: TLS_VERIFY
+          value: "true"
+
+    # Task 2c: Build Review Service (Java Spring Boot)
+    - name: build-review
+      runAfter: ["fetch-source"]
+      taskRef:
+        kind: Task
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: CONTEXT
+          value: "services/review-service"
+        - name: DOCKERFILE
+          value: "services/review-service/Dockerfile"
+        - name: IMAGE
+          value: "$(params.registry-host)/review-service:$(params.git-revision)"
+        - name: TLS_VERIFY
+          value: "true"
+
+    # Task 2d: Build Storefront UI Service (Node.js)
+    - name: build-ui
+      runAfter: ["fetch-source"]
+      taskRef:
+        kind: Task
+        name: buildah
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: CONTEXT
+          value: "services/ui-service"
+        - name: DOCKERFILE
+          value: "services/ui-service/Dockerfile"
+        - name: IMAGE
+          value: "$(params.registry-host)/ui-service:$(params.git-revision)"
+        - name: TLS_VERIFY
+          value: "true"
+
+    # Task 3: Update GitOps Repository (app-services-gitops)
+    - name: update-gitops
+      runAfter: ["build-catalogue", "build-recommendation", "build-review", "build-ui"]
+      taskRef:
+        name: update-gitops-repository
+        kind: Task
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: git-revision
+          value: $(params.git-revision)
+        - name: gitops-repo-url
+          value: $(params.gitops-repo-url)
+        - name: app-namespace
+          value: "trailhead-staging"
