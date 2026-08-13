@@ -17,6 +17,13 @@ spec:
   steps:
     - name: update-and-push-gitops
       image: registry.redhat.io/openshift4/ose-cli:latest
+      env:
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-gitops-token
+              key: token
+              optional: true
       script: |
         #!/usr/bin/env bash
         set -e
@@ -31,9 +38,16 @@ spec:
         git config --global user.email "tekton-bot@trailhead.co"
         git config --global user.name "Tekton CI Bot"
         
+        # Inject authentication token into clone URL if present
+        if [ -n "${GITHUB_TOKEN}" ]; then
+          AUTH_GITOPS_URL=$(echo "${GITOPS_URL}" | sed -E "s#https://#https://${GITHUB_TOKEN}@#")
+        else
+          AUTH_GITOPS_URL="${GITOPS_URL}"
+        fi
+        
         # Clone GitOps repo to temporary workspace directory
         BUILD_DIR=$(mktemp -d)
-        git clone --depth 1 -b ${BRANCH} ${GITOPS_URL} ${BUILD_DIR}
+        git clone --depth 1 -b ${BRANCH} ${AUTH_GITOPS_URL} ${BUILD_DIR}
         
         cd ${BUILD_DIR}/manifests/overlays/sno
         
@@ -75,7 +89,7 @@ spec:
         
         echo "GitOps repository updated successfully!"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: trailhead-platform-pipeline
@@ -92,12 +106,20 @@ spec:
       default: "https://github.com/mkbntech/app-services-gitops.git"
   workspaces:
     - name: shared-workspace
+    - name: dockerconfig
+      optional: true
   tasks:
     # Task 1: Fetch Source Code from App Repo
     - name: fetch-source
       taskRef:
-        kind: Task
-        name: git-clone
+        resolver: cluster
+        params:
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: openshift-pipelines
+          - name: kind
+            value: task
       workspaces:
         - name: output
           workspace: shared-workspace
@@ -106,16 +128,26 @@ spec:
           value: $(params.git-url)
         - name: REVISION
           value: $(params.git-revision)
+        - name: DELETE_EXISTING
+          value: "false"
 
     # Task 2a: Build Catalogue Service (Python)
     - name: build-catalogue
       runAfter: ["fetch-source"]
       taskRef:
-        kind: Task
-        name: buildah
+        resolver: cluster
+        params:
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines
+          - name: kind
+            value: task
       workspaces:
         - name: source
           workspace: shared-workspace
+        - name: dockerconfig
+          workspace: dockerconfig
       params:
         - name: CONTEXT
           value: "services/catalogue-service"
@@ -130,11 +162,19 @@ spec:
     - name: build-recommendation
       runAfter: ["fetch-source"]
       taskRef:
-        kind: Task
-        name: buildah
+        resolver: cluster
+        params:
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines
+          - name: kind
+            value: task
       workspaces:
         - name: source
           workspace: shared-workspace
+        - name: dockerconfig
+          workspace: dockerconfig
       params:
         - name: CONTEXT
           value: "services/recommendation-service"
@@ -149,11 +189,19 @@ spec:
     - name: build-review
       runAfter: ["fetch-source"]
       taskRef:
-        kind: Task
-        name: buildah
+        resolver: cluster
+        params:
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines
+          - name: kind
+            value: task
       workspaces:
         - name: source
           workspace: shared-workspace
+        - name: dockerconfig
+          workspace: dockerconfig
       params:
         - name: CONTEXT
           value: "services/review-service"
@@ -168,11 +216,19 @@ spec:
     - name: build-ui
       runAfter: ["fetch-source"]
       taskRef:
-        kind: Task
-        name: buildah
+        resolver: cluster
+        params:
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines
+          - name: kind
+            value: task
       workspaces:
         - name: source
           workspace: shared-workspace
+        - name: dockerconfig
+          workspace: dockerconfig
       params:
         - name: CONTEXT
           value: "services/ui-service"

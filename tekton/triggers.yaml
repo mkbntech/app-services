@@ -6,7 +6,7 @@ metadata:
 spec:
   params:
     - name: git-revision
-      value: $(body.head_commit.id)
+      value: $(body.after)
     - name: git-url
       value: $(body.repository.clone_url)
 ---
@@ -23,23 +23,24 @@ spec:
     - apiVersion: tekton.dev/v1beta1
       kind: PipelineRun
       metadata:
-        generateName: trailhead-pipeline-run
+        generateName: trailhead-pipeline-run-
         namespace: trailhead-staging
         labels:
           tekton.dev/pipeline: trailhead-platform-pipeline
       spec:
         serviceAccountName: trailhead-pipeline-sa
+        podTemplate:
+          securityContext:
+            runAsUser: 0
         pipelineRef:
           name: trailhead-platform-pipeline
         workspaces:
           - name: shared-workspace
-            volumeClaimTemplate:
-              spec:
-                storageClassName: local-sc
-                accessModes: ["ReadWriteOnce"]
-                resources:
-                  requests:
-                    storage: 2Gi
+            persistentVolumeClaim:
+              claimName: shared-workspace-pvc
+          - name: dockerconfig
+            secret:
+              secretName: quay-secret
         params:
           - name: git-url
             value: $(tt.params.git-url)

@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM docker.io/library/node:20-alpine AS base
 WORKDIR /srv
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
