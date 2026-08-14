@@ -53,7 +53,11 @@ spec:
         
         # Update Helm chart values-sno.yaml with current Git commit tag
         if [ -f "values-sno.yaml" ]; then
-          sed -i -E "s/tag: .*/tag: \"${REV}\"/" values-sno.yaml
+          if grep -q "tag:" values-sno.yaml; then
+            sed -i -E "s/tag: .*/tag: \"${REV}\"/" values-sno.yaml
+          else
+            sed -i "/services:/a \  tag: \"${REV}\"" values-sno.yaml
+          fi
           git add values-sno.yaml
         fi
         
