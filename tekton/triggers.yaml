@@ -38,9 +38,6 @@ spec:
           - name: shared-workspace
             persistentVolumeClaim:
               claimName: shared-workspace-pvc
-          - name: dockerconfig
-            secret:
-              secretName: quay-secret
         params:
           - name: git-url
             value: $(tt.params.git-url)

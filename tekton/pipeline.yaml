@@ -16,7 +16,7 @@ spec:
     - name: source
   steps:
     - name: update-and-push-gitops
-      image: registry.redhat.io/openshift4/ose-cli:latest
+      image: alpine/git:latest
       env:
         - name: GITHUB_TOKEN
           valueFrom:
@@ -25,7 +25,7 @@ spec:
               key: token
               optional: true
       script: |
-        #!/usr/bin/env bash
+        #!/bin/sh
         set -e
         REV="$(params.git-revision)"
         NS="$(params.app-namespace)"
@@ -132,8 +132,10 @@ spec:
           value: $(params.git-url)
         - name: REVISION
           value: $(params.git-revision)
+        - name: SUBDIRECTORY
+          value: "source"
         - name: DELETE_EXISTING
-          value: "false"
+          value: "true"
 
     # Task 2a: Build Catalogue Service (Python)
     - name: build-catalogue
@@ -154,9 +156,9 @@ spec:
           workspace: dockerconfig
       params:
         - name: CONTEXT
-          value: "services/catalogue-service"
+          value: "source/services/catalogue-service"
         - name: DOCKERFILE
-          value: "services/catalogue-service/Dockerfile"
+          value: "source/services/catalogue-service/Dockerfile"
         - name: IMAGE
           value: "$(params.registry-host)/catalogue-service:$(params.git-revision)"
         - name: TLS_VERIFY
@@ -181,9 +183,9 @@ spec:
           workspace: dockerconfig
       params:
         - name: CONTEXT
-          value: "services/recommendation-service"
+          value: "source/services/recommendation-service"
         - name: DOCKERFILE
-          value: "services/recommendation-service/Dockerfile"
+          value: "source/services/recommendation-service/Dockerfile"
         - name: IMAGE
           value: "$(params.registry-host)/recommendation-service:$(params.git-revision)"
         - name: TLS_VERIFY
@@ -208,9 +210,9 @@ spec:
           workspace: dockerconfig
       params:
         - name: CONTEXT
-          value: "services/review-service"
+          value: "source/services/review-service"
         - name: DOCKERFILE
-          value: "services/review-service/Dockerfile"
+          value: "source/services/review-service/Dockerfile"
         - name: IMAGE
           value: "$(params.registry-host)/review-service:$(params.git-revision)"
         - name: TLS_VERIFY
@@ -235,9 +237,9 @@ spec:
           workspace: dockerconfig
       params:
         - name: CONTEXT
-          value: "services/ui-service"
+          value: "source/services/ui-service"
         - name: DOCKERFILE
-          value: "services/ui-service/Dockerfile"
+          value: "source/services/ui-service/Dockerfile"
         - name: IMAGE
           value: "$(params.registry-host)/ui-service:$(params.git-revision)"
         - name: TLS_VERIFY
