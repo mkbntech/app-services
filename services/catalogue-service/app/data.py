@@ -30,11 +30,11 @@ PRODUCTS = [
     },
     {
         "id": "th-003",
-        "name": "Basecamp 3P Tent",
+        "name": "Basecamp 2P Tent",
         "category": "shelter",
         "price": 279.00,
         "currency": "USD",
-        "description": "A freestanding 3-person tent that pitches in under "
+        "description": "A freestanding 2-person tent that pitches in under "
                         "three minutes, tested to 40mph ridgeline gusts.",
         "image": "/img/tent.jpg",
         "tags": ["camping", "freestanding", "3-season"],
