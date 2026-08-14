@@ -61,36 +61,6 @@ Access the application in your browser:
 * **Recommendation Health**: [http://localhost:8002/health](http://localhost:8002/health)
 * **Review Service API**: [http://localhost:8003/api/reviews](http://localhost:8003/api/reviews)
 
----
-
-## Automated CI/CD Pipeline
-
-Continuous integration and delivery is defined in [`.gitlab-ci.yml`](file:///.gitlab-ci.yml):
-
-```mermaid
-flowchart LR
-    A[Test Stage] --> B[Build Stage\nKaniko]
-    B --> C[Security Scan\nTrivy]
-    C --> D[Push Stage\nSkopeo]
-    D --> E[GitOps Sync\nAuto-bump dev tag]
-```
-
-1. **Test Stage**: Runs source-level unit and syntax checks (`node --check`, `py_compile`, `go vet`, `mvn test`).
-2. **Build Stage**: Uses `gcr.io/kaniko-project/executor` to build container images without docker daemon access, emitting local `.tar` artifacts (`--no-push`).
-3. **Security Scan Stage**: Scans container image `.tar` files using `aquasec/trivy` for `HIGH` and `CRITICAL` vulnerabilities.
-4. **Push Stage**: Uses `skopeo` to push verified images to Azure Container Registry (ACR).
-5. **GitOps Sync Stage**: Automatically updates `SEMVER_TAG` in `environments/dev/apps/values.yaml` in the [`env-config-gitops`](../env-config-gitops) repository.
-
----
-
-## Security & Best Practices
-
-* **Rootless & Secure Image Builds**: Kaniko builds container images without requiring a privileged Docker daemon.
-* **Vulnerability Gating**: Images are scanned locally with Trivy prior to being uploaded to the container registry.
-* **Separation of Concerns**: This repository handles container compilation and image verification; deployment manifests and cluster state are managed exclusively in `env-config-gitops`.
-
----
-
 ## License
 
 This repository is licensed under the [MIT License](LICENSE).
