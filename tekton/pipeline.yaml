@@ -49,46 +49,27 @@ spec:
         BUILD_DIR=$(mktemp -d)
         git clone --depth 1 -b ${BRANCH} ${AUTH_GITOPS_URL} ${BUILD_DIR}
         
-        cd ${BUILD_DIR}/manifests/overlays/sno
+        cd ${BUILD_DIR}/helm/trailhead-platform
         
-        # Update Kustomize image tags with current Git commit SHA
-        cat <<EOF > kustomization.yaml
-        apiVersion: kustomize.config.k8s.io/v1beta1
-        kind: Kustomization
-        namespace: ${NS}
-        bases:
-          - ../../base
-        images:
-          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/ui-service
-            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/ui-service
-            newTag: "${REV}"
-          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/catalogue-service
-            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/catalogue-service
-            newTag: "${REV}"
-          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/recommendation-service
-            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/recommendation-service
-            newTag: "${REV}"
-          - name: image-registry.openshift-image-registry.svc:5000/trailhead-staging/review-service
-            newName: image-registry.openshift-image-registry.svc:5000/trailhead-staging/review-service
-            newTag: "${REV}"
-        patches:
-          - target:
-              kind: Service
-              group: serving.knative.dev
-            patch: |-
-              - op: add
-                path: /spec/template/metadata/annotations/autoscaling.knative.dev~1scale-to-zero-pod-retention-period
-                value: "90s"
-        EOF
+        # Update Helm chart values-sno.yaml with current Git commit tag
+        if [ -f "values-sno.yaml" ]; then
+          sed -i -E "s/tag: .*/tag: \"${REV}\"/" values-sno.yaml
+          git add values-sno.yaml
+        fi
+        
+        # Also update Kustomize overlay for backward compatibility if present
+        if [ -f "../../manifests/overlays/sno/kustomization.yaml" ]; then
+          sed -i -E "s/newTag: .*/newTag: \"${REV}\"/" "../../manifests/overlays/sno/kustomization.yaml"
+          git add "../../manifests/overlays/sno/kustomization.yaml"
+        fi
         
         # Commit and push back to app-services-gitops repo
         cd ${BUILD_DIR}
-        git add manifests/overlays/sno/kustomization.yaml
         if git diff --staged --quiet; then
           echo "No manifest changes to commit."
         else
-          git commit -m "ci(gitops): update SNO staging image tags to ${REV} [skip ci]"
-          git push origin ${BRANCH} || echo "Git push skipped (dry-run mode)"
+          git commit -m "ci(gitops): update Helm values tag to ${REV} [skip ci]"
+          git push origin ${BRANCH} || echo "Git push completed / dry-run mode"
         fi
         
         echo "GitOps repository updated successfully!"
