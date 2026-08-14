@@ -16,7 +16,7 @@ spec:
     - name: source
   steps:
     - name: update-and-push-gitops
-      image: alpine/git:latest
+      image: registry.redhat.io/openshift4/ose-cli:latest
       env:
         - name: GITHUB_TOKEN
           valueFrom:
@@ -28,7 +28,6 @@ spec:
         #!/bin/sh
         set -e
         REV="$(params.git-revision)"
-        NS="$(params.app-namespace)"
         GITOPS_URL="$(params.gitops-repo-url)"
         BRANCH="$(params.gitops-branch)"
         
@@ -76,7 +75,9 @@ spec:
           git push origin ${BRANCH} || echo "Git push completed / dry-run mode"
         fi
         
-        echo "GitOps repository updated successfully!"
+        echo "GitOps repository updated successfully! Triggering instant ArgoCD sync..."
+        oc patch application trailhead-sno-app -n openshift-gitops --type merge -p '{"operation":{"sync":{"prune":true}}}' || true
+        echo "ArgoCD application sync triggered!"
 ---
 apiVersion: tekton.dev/v1
 kind: Pipeline
