@@ -54,7 +54,7 @@ PRODUCTS = [
         "id": "th-005",
         "name": "Compass Rose Cookset",
         "category": "cookware",
-        "price": 64.00,
+        "price": 65.00,
         "currency": "USD",
         "description": "Anodized aluminum cookset that nests down to the size "
                         "of a 1L bottle, includes a folding handle.",
