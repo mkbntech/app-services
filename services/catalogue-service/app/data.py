@@ -8,11 +8,11 @@ zero external dependencies and starts instantly in any environment.
 PRODUCTS = [
     {
         "id": "th-001",
-        "name": "Contour 45 Backpack",
+        "name": "Contour 55 Backpack",
         "category": "packs",
         "price": 189.00,
         "currency": "USD",
-        "description": "A 45L top-loader with a mapped-out compartment system, "
+        "description": "A 55L top-loader with a mapped-out compartment system, "
                         "built for multi-day ridge routes.",
         "image": "/img/pack.jpg",
         "tags": ["multi-day", "hiking", "ventilated"],
