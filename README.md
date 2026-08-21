@@ -1,14 +1,10 @@
 # TrailHead Supply Co. — Microservices (`app-services`)
-
-[![Pipeline Status](https://gitlab.com/trailhead-supply-co/app-services/badges/main/pipeline.svg)](https://gitlab.com/trailhead-supply-co/app-services/-/commits/main)
 ![Kaniko Build](https://img.shields.io/badge/Build-Kaniko-orange?logo=docker&logoColor=white)
-![Trivy Security Scan](https://img.shields.io/badge/Security-Trivy%20Scan-blue?logo=aquasec&logoColor=white)
-![Skopeo Registry Sync](https://img.shields.io/badge/Registry-Skopeo-red?logo=redhat&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
 Core microservices repository for the **TrailHead Supply Co.** e-commerce platform. 
 
-This repository manages **build and test automation** for four microservices: it runs unit & integration tests, builds un-pushed container images using rootless Kaniko, scans local image tarballs for vulnerabilities using Trivy, pushes verified images to Azure Container Registry (ACR) via Skopeo, and automatically updates image tags in the GitOps deployment repository ([`env-config-gitops`](../env-config-gitops)).
+This repository manages **build and test automation** for four microservices: it runs unit & integration tests, builds un-pushed container images using rootless Kaniko, scans local image tarballs for vulnerabilities using Trivy, pushes verified images to Azure Container Registry (ACR) via Skopeo, and automatically updates image tags in the GitOps deployment repository ([`env-config-gitops`].
 
 ---
 
